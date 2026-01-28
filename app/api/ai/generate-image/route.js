@@ -1,28 +1,46 @@
 import { NextResponse } from 'next/server';
 import Replicate from 'replicate';
-import { REPLICATE_MODEL, MOCK_GENERATED_IMAGES } from '@/lib/constants';
+import { REPLICATE_MODEL, ASPECT_RATIOS, DEMO_IMAGES } from '@/lib/constants';
 
 export async function POST(request) {
   try {
-    const { prompt } = await request.json();
+    const body = await request.json();
+    const { prompt, aspect = '1:1', seed } = body;
 
+    // Validate prompt
     if (!prompt || typeof prompt !== 'string') {
       return NextResponse.json(
-        { error: 'Prompt is required' },
+        { error: 'Prompt is required', demo: false },
         { status: 400 }
       );
     }
 
+    if (prompt.trim().length < 3) {
+      return NextResponse.json(
+        { error: 'Prompt must be at least 3 characters', demo: false },
+        { status: 400 }
+      );
+    }
+
+    // Validate aspect ratio
+    const validAspects = ['1:1', '16:9', '9:16'];
+    const selectedAspect = validAspects.includes(aspect) ? aspect : '1:1';
+    const dimensions = ASPECT_RATIOS[selectedAspect];
+
     const apiToken = process.env.REPLICATE_API_TOKEN;
 
-    // If no API token, return a mock image for demo purposes
+    // Demo mode - return mock images when no API token
     if (!apiToken) {
-      console.log('REPLICATE_API_TOKEN not set, returning mock image');
-      const randomIndex = Math.floor(Math.random() * MOCK_GENERATED_IMAGES.length);
+      console.log('REPLICATE_API_TOKEN not set, returning demo images');
+      
+      // Return multiple random demo images
+      const shuffled = [...DEMO_IMAGES].sort(() => Math.random() - 0.5);
+      const demoResults = shuffled.slice(0, 3);
+      
       return NextResponse.json({
-        imageUrl: MOCK_GENERATED_IMAGES[randomIndex],
-        mock: true,
-        message: 'Mock image returned. Add REPLICATE_API_TOKEN for real AI generation.'
+        demo: true,
+        images: demoResults,
+        message: 'Demo mode: Add REPLICATE_API_TOKEN for real AI generation.'
       });
     }
 
@@ -31,44 +49,54 @@ export async function POST(request) {
       auth: apiToken,
     });
 
+    // Build input parameters
+    const input = {
+      prompt: prompt.trim(),
+      negative_prompt: 'blurry, bad quality, distorted, ugly, low resolution, watermark, text',
+      width: dimensions.width,
+      height: dimensions.height,
+      num_outputs: 1,
+      scheduler: 'K_EULER',
+      num_inference_steps: 30,
+      guidance_scale: 7.5,
+      refine: 'expert_ensemble_refiner',
+      high_noise_frac: 0.8,
+    };
+
+    // Add seed if provided for reproducibility
+    if (typeof seed === 'number') {
+      input.seed = seed;
+    }
+
+    console.log('Generating image with Replicate:', { prompt: prompt.trim(), aspect: selectedAspect });
+
     // Run the SDXL model
-    const output = await replicate.run(REPLICATE_MODEL, {
-      input: {
-        prompt: prompt,
-        negative_prompt: 'blurry, bad quality, distorted, ugly',
-        width: 1024,
-        height: 1024,
-        num_outputs: 1,
-        scheduler: 'K_EULER',
-        num_inference_steps: 25,
-        guidance_scale: 7.5,
-        refine: 'expert_ensemble_refiner',
-        high_noise_frac: 0.8,
-      },
-    });
+    const output = await replicate.run(REPLICATE_MODEL, { input });
 
     // SDXL returns an array of image URLs
-    const imageUrl = Array.isArray(output) ? output[0] : output;
+    const images = Array.isArray(output) ? output : [output];
 
-    if (!imageUrl) {
+    if (!images.length || !images[0]) {
       throw new Error('No image URL returned from Replicate');
     }
 
     return NextResponse.json({
-      imageUrl,
-      mock: false
+      demo: false,
+      images: images,
     });
 
   } catch (error) {
     console.error('Error generating image:', error);
     
-    // Return a mock image on error for better UX
-    const randomIndex = Math.floor(Math.random() * MOCK_GENERATED_IMAGES.length);
+    // Return demo images on error for better UX
+    const shuffled = [...DEMO_IMAGES].sort(() => Math.random() - 0.5);
+    const fallbackImages = shuffled.slice(0, 2);
+    
     return NextResponse.json({
-      imageUrl: MOCK_GENERATED_IMAGES[randomIndex],
-      mock: true,
+      demo: true,
+      images: fallbackImages,
       error: error.message,
-      message: 'Fallback mock image returned due to error.'
-    });
+      message: 'Fallback to demo images due to generation error.'
+    }, { status: 200 }); // Return 200 so UI still works
   }
 }
