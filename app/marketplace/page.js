@@ -75,7 +75,8 @@ export default function MarketplacePage() {
               nft={nft}
               onBuy={() => alert(`Buying ${nft.name} - Coming Soon!`)}
             />
-          ))}n        </div>
+          ))}
+        </div>
 
         {/* Empty State */}
         {filteredNFTs.length === 0 && (
