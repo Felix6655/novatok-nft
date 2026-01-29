@@ -4,16 +4,10 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Gem, Loader2, Check, ExternalLink, AlertCircle, Upload, RefreshCw, Wallet } from 'lucide-react';
-import { useAccount, useChainId, useSwitchChain, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { Gem, Loader2, Check, ExternalLink, AlertCircle, Upload, RefreshCw } from 'lucide-react';
 import GlassCard from '@/components/GlassCard';
 import { useToast } from '@/components/Toast';
 import { buildTokenUri } from '@/lib/metadata';
-import { NFT_CONTRACT_ADDRESS, NFT_ABI, isContractConfigured, parseTokenIdFromReceipt } from '@/lib/web3/nft';
-import { SEPOLIA_CHAIN_ID } from '@/lib/constants';
-
-// Check if wallet connect is configured
-const isWalletConnectConfigured = Boolean(process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID);
 
 function MintContent() {
   const searchParams = useSearchParams();
@@ -27,68 +21,19 @@ function MintContent() {
   const [mintSuccess, setMintSuccess] = useState(false);
   const [mintTxHash, setMintTxHash] = useState(null);
   const [mintedTokenId, setMintedTokenId] = useState(null);
-  const [mintError, setMintError] = useState('');
   
-  // Wallet hooks - only use if configured
-  const account = isWalletConnectConfigured ? useAccount() : { address: null, isConnected: false };
-  const chainId = isWalletConnectConfigured ? useChainId() : null;
-  const switchChainHook = isWalletConnectConfigured ? useSwitchChain() : { switchChain: null };
-  const writeContractHook = isWalletConnectConfigured ? useWriteContract() : { 
-    writeContract: null, 
-    data: null, 
-    isPending: false, 
-    error: null,
-    reset: () => {}
-  };
-  
-  const { address, isConnected } = account;
-  const { switchChain } = switchChainHook;
-  const { writeContract, data: txHash, isPending: isWritePending, error: writeError, reset: resetWrite } = writeContractHook;
-  
-  const isCorrectNetwork = chainId === SEPOLIA_CHAIN_ID;
-  
-  // Wait for transaction receipt
-  const { isLoading: isConfirming, isSuccess: isTxSuccess, data: txReceipt } = 
-    isWalletConnectConfigured && txHash 
-      ? useWaitForTransactionReceipt({ hash: txHash })
-      : { isLoading: false, isSuccess: false, data: null };
+  const contractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
+  const isContractConfigured = Boolean(contractAddress);
 
-  // Handle transaction success
-  useEffect(() => {
-    if (isTxSuccess && txHash) {
-      setMintTxHash(txHash);
-      setMintSuccess(true);
-      setIsMinting(false);
-      
-      // Try to parse tokenId from receipt
-      if (txReceipt) {
-        const tokenId = parseTokenIdFromReceipt(txReceipt);
-        if (tokenId) {
-          setMintedTokenId(tokenId);
-        }
-      }
-      
-      toast.success('NFT minted successfully!');
+  const handleMint = async () => {
+    if (!imageUrl) {
+      toast.warning('Please provide an image URL');
+      return;
     }
-  }, [isTxSuccess, txHash, txReceipt, toast]);
-
-  // Handle write errors
-  useEffect(() => {
-    if (writeError) {
-      setIsMinting(false);
-      const errorMessage = writeError.message?.includes('User rejected') 
-        ? 'Transaction rejected by user'
-        : writeError.message || 'Minting failed';
-      setMintError(errorMessage);
-      toast.error(errorMessage);
-    }
-  }, [writeError, toast]);
-
-  const handleDemoMint = async () => {
-    setIsMinting(true);
-    setMintError('');
     
-    // Simulate minting delay
+    setIsMinting(true);
+    
+    // Demo mode - simulate minting
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Generate fake tx hash and token ID
@@ -100,65 +45,15 @@ function MintContent() {
     setMintSuccess(true);
     setIsMinting(false);
     
+    // Build tokenURI for reference
+    const tokenURI = buildTokenUri({
+      name: name || 'NovaTok NFT',
+      description: description || 'Created with NovaTok Explorer',
+      image: imageUrl,
+    });
+    console.log('Demo mint tokenURI:', tokenURI);
+    
     toast.success('NFT minted successfully! (Demo)');
-  };
-
-  const handleRealMint = async () => {
-    if (!isConnected) {
-      toast.warning('Please connect your wallet first');
-      return;
-    }
-    
-    if (!isCorrectNetwork) {
-      toast.warning('Please switch to Sepolia network');
-      switchChain?.({ chainId: SEPOLIA_CHAIN_ID });
-      return;
-    }
-    
-    if (!imageUrl) {
-      toast.warning('Please provide an image URL');
-      return;
-    }
-    
-    setIsMinting(true);
-    setMintError('');
-    
-    try {
-      // Build the tokenURI with metadata
-      const tokenURI = buildTokenUri({
-        name: name || 'NovaTok NFT',
-        description: description || 'Created with NovaTok Explorer',
-        image: imageUrl,
-      });
-      
-      // Try minting with 'mint' function first
-      writeContract({
-        address: NFT_CONTRACT_ADDRESS,
-        abi: NFT_ABI,
-        functionName: 'mint',
-        args: [address, tokenURI],
-      });
-      
-    } catch (err) {
-      console.error('Mint error:', err);
-      setMintError(err.message || 'Minting failed');
-      setIsMinting(false);
-      toast.error('Minting failed');
-    }
-  };
-
-  const handleMint = async () => {
-    if (!imageUrl) {
-      toast.warning('Please provide an image URL');
-      return;
-    }
-    
-    // If contract is not configured or wallet not connected, use demo mode
-    if (!isContractConfigured || !isWalletConnectConfigured || !isConnected) {
-      return handleDemoMint();
-    }
-    
-    return handleRealMint();
   };
 
   const resetForm = () => {
@@ -168,11 +63,7 @@ function MintContent() {
     setImageUrl('');
     setName('');
     setDescription('');
-    setMintError('');
-    resetWrite?.();
   };
-
-  const isLoading = isMinting || isWritePending || isConfirming;
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
@@ -189,58 +80,15 @@ function MintContent() {
           </p>
         </div>
 
-        {/* Configuration Warnings */}
-        {!isContractConfigured && (
-          <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-              <p className="text-yellow-300 text-sm">
-                Demo Mode: Add NEXT_PUBLIC_NFT_CONTRACT_ADDRESS for real minting on Sepolia.
-              </p>
-            </div>
-          </GlassCard>
-        )}
-        
-        {isContractConfigured && !isWalletConnectConfigured && (
-          <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-              <p className="text-yellow-300 text-sm">
-                Demo Mode: Add NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID to enable wallet connection.
-              </p>
-            </div>
-          </GlassCard>
-        )}
-        
-        {isContractConfigured && isWalletConnectConfigured && !isConnected && (
-          <GlassCard className="p-4 mb-6 border-blue-500/30" hover={false}>
-            <div className="flex items-center gap-3">
-              <Wallet className="w-5 h-5 text-blue-400 flex-shrink-0" />
-              <p className="text-blue-300 text-sm">
-                Connect your wallet to mint real NFTs on Sepolia. Demo mint available without wallet.
-              </p>
-            </div>
-          </GlassCard>
-        )}
-        
-        {isContractConfigured && isWalletConnectConfigured && isConnected && !isCorrectNetwork && (
-          <GlassCard className="p-4 mb-6 border-orange-500/30" hover={false}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0" />
-                <p className="text-orange-300 text-sm">
-                  Please switch to Sepolia network to mint.
-                </p>
-              </div>
-              <button
-                onClick={() => switchChain?.({ chainId: SEPOLIA_CHAIN_ID })}
-                className="px-3 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 text-sm font-medium transition-colors"
-              >
-                Switch Network
-              </button>
-            </div>
-          </GlassCard>
-        )}
+        {/* Configuration Warning */}
+        <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+            <p className="text-yellow-300 text-sm">
+              Demo Mode: Add environment variables for real minting on Sepolia. See README for details.
+            </p>
+          </div>
+        </GlassCard>
 
         {/* Success State */}
         {mintSuccess && mintTxHash && (
@@ -352,37 +200,27 @@ function MintContent() {
                 />
               </div>
 
-              {/* Error Display */}
-              {mintError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-                  <p className="text-red-400 text-sm">{mintError}</p>
-                </div>
-              )}
-
               {/* Mint Button */}
               <button
                 onClick={handleMint}
-                disabled={isLoading || !imageUrl}
+                disabled={isMinting || !imageUrl}
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-lg transition-all"
               >
-                {isLoading ? (
+                {isMinting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    {isWritePending ? 'Confirm in Wallet...' : isConfirming ? 'Confirming...' : 'Minting...'}
+                    Minting...
                   </>
                 ) : (
                   <>
                     <Gem className="w-5 h-5" />
-                    {isContractConfigured && isConnected && isCorrectNetwork ? 'Mint NFT' : 'Mint NFT (Demo)'}
+                    Mint NFT (Demo)
                   </>
                 )}
               </button>
               
-              {/* Info text */}
               <p className="text-xs text-gray-500 text-center">
-                {isContractConfigured && isConnected && isCorrectNetwork 
-                  ? 'This will mint your NFT on Ethereum Sepolia testnet'
-                  : 'Demo mode simulates the minting process'}
+                Demo mode simulates the minting process. Add NEXT_PUBLIC_NFT_CONTRACT_ADDRESS for real minting.
               </p>
             </div>
           </GlassCard>
