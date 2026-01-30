@@ -7,24 +7,34 @@ import { AlertCircle, RefreshCw, Plus, Loader2, ImageIcon } from 'lucide-react';
 import GlassCard from '@/components/GlassCard';
 import { useToast } from '@/components/Toast';
 import { MOCK_NFTS } from '@/lib/constants';
+import { isContractConfigured } from "@/lib/web3/nft";
 
 export default function MyNFTsPage() {
   const { toast } = useToast();
   const [nfts, setNfts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load demo NFTs on mount
+  // Load NFTs based on contract config
   useEffect(() => {
     setIsLoading(true);
-    // Simulate loading delay
-    setTimeout(() => {
-      setNfts(MOCK_NFTS.slice(0, 4).map((nft, idx) => ({
-        ...nft,
-        tokenId: String(idx + 1),
-        isDemo: true,
-      })));
-      setIsLoading(false);
-    }, 500);
+    if (!isContractConfigured) {
+      // Demo Mode: show mock NFTs
+      setTimeout(() => {
+        setNfts(MOCK_NFTS.slice(0, 4).map((nft, idx) => ({
+          ...nft,
+          tokenId: String(idx + 1),
+          isDemo: true,
+        })));
+        setIsLoading(false);
+      }, 500);
+    } else {
+      // Real Mode: fetch from blockchain (placeholder)
+      // TODO: Replace with actual blockchain fetch logic
+      setTimeout(() => {
+        setNfts([]);
+        setIsLoading(false);
+      }, 500);
+    }
   }, []);
 
   const handleRefresh = () => {
@@ -71,14 +81,16 @@ export default function MyNFTsPage() {
         </div>
 
         {/* Demo Mode Banner */}
-        <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-            <p className="text-yellow-300 text-sm">
-              Demo Mode: Showing sample NFTs. Add environment variables and connect wallet to view your real collection.
-            </p>
-          </div>
-        </GlassCard>
+        {!isContractConfigured && (
+          <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+              <p className="text-yellow-300 text-sm">
+                Demo Mode: Showing sample NFTs. Add environment variables and connect wallet to view your real collection.
+              </p>
+            </div>
+          </GlassCard>
+        )}
 
         {/* Loading State */}
         {isLoading && (

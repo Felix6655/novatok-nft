@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Sparkles, Loader2, Wand2, RefreshCw, Download, Trash2, AlertCircle, ImageIcon } from 'lucide-react';
 import GlassCard from '@/components/GlassCard';
 import { useToast } from '@/components/Toast';
+import { isContractConfigured } from "@/lib/web3/nft";
 
 const STORAGE_KEY = 'novatok_generated_images';
 
@@ -104,10 +105,13 @@ export default function CreatePage() {
       setGeneratedImages((prev) => [...imageObjects, ...prev]);
       setIsDemo(data.demo);
       
-      if (data.demo) {
+      // Demo mode for AI is still based on REPLICATE_API_TOKEN, but banner should only show if !isContractConfigured
+      if (!isContractConfigured) {
         toast.info('Demo mode: Using sample images');
+        setIsDemo(true);
       } else {
         toast.success('Image generated successfully!');
+        setIsDemo(false);
       }
     } catch (err) {
       setError(err.message);
@@ -149,7 +153,7 @@ export default function CreatePage() {
         </div>
 
         {/* Demo Banner */}
-        {isDemo && (
+        {!isContractConfigured && (
           <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
             <div className="flex items-center gap-3">
               <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />

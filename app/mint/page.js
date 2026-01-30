@@ -8,6 +8,7 @@ import { Gem, Loader2, Check, ExternalLink, AlertCircle, Upload, RefreshCw } fro
 import GlassCard from '@/components/GlassCard';
 import { useToast } from '@/components/Toast';
 import { buildTokenUri } from '@/lib/metadata';
+import { isContractConfigured } from "@/lib/web3/nft";
 
 function MintContent() {
   const searchParams = useSearchParams();
@@ -22,8 +23,7 @@ function MintContent() {
   const [mintTxHash, setMintTxHash] = useState(null);
   const [mintedTokenId, setMintedTokenId] = useState(null);
   
-  const contractAddress = process.env.NEXT_PUBLIC_NFT_CONTRACT_ADDRESS;
-  const isContractConfigured = Boolean(contractAddress);
+  // Use isContractConfigured from lib/web3/nft.js
 
   const handleMint = async () => {
     if (!imageUrl) {
@@ -33,27 +33,27 @@ function MintContent() {
     
     setIsMinting(true);
     
-    // Demo mode - simulate minting
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate fake tx hash and token ID
-    const fakeTxHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
-    const fakeTokenId = Math.floor(Math.random() * 10000);
-    
-    setMintTxHash(fakeTxHash);
-    setMintedTokenId(fakeTokenId);
-    setMintSuccess(true);
-    setIsMinting(false);
-    
-    // Build tokenURI for reference
-    const tokenURI = buildTokenUri({
-      name: name || 'NovaTok NFT',
-      description: description || 'Created with NovaTok Explorer',
-      image: imageUrl,
-    });
-    console.log('Demo mint tokenURI:', tokenURI);
-    
-    toast.success('NFT minted successfully! (Demo)');
+    if (!isContractConfigured) {
+      // Demo mode - simulate minting
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Generate fake tx hash and token ID
+      const fakeTxHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+      const fakeTokenId = Math.floor(Math.random() * 10000);
+      setMintTxHash(fakeTxHash);
+      setMintedTokenId(fakeTokenId);
+      setMintSuccess(true);
+      setIsMinting(false);
+      // Build tokenURI for reference
+      const tokenURI = buildTokenUri({
+        name: name || 'NovaTok NFT',
+        description: description || 'Created with NovaTok Explorer',
+        image: imageUrl,
+      });
+      console.log('Demo mint tokenURI:', tokenURI);
+      toast.success('NFT minted successfully! (Demo)');
+      return;
+    }
+    // TODO: Add real mint logic here
   };
 
   const resetForm = () => {
@@ -81,14 +81,16 @@ function MintContent() {
         </div>
 
         {/* Configuration Warning */}
-        <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
-          <div className="flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-            <p className="text-yellow-300 text-sm">
-              Demo Mode: Add environment variables for real minting on Sepolia. See README for details.
-            </p>
-          </div>
-        </GlassCard>
+        {!isContractConfigured && (
+          <GlassCard className="p-4 mb-6 border-yellow-500/30" hover={false}>
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+              <p className="text-yellow-300 text-sm">
+                Demo Mode: Add environment variables for real minting on Sepolia. See README for details.
+              </p>
+            </div>
+          </GlassCard>
+        )}
 
         {/* Success State */}
         {mintSuccess && mintTxHash && (
