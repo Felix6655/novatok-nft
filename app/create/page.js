@@ -1,6 +1,19 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+export default function CreatePage() {
+  return (
+    <div>Client-only placeholder. Replace with your UI.</div>
+  );
+}
+
+// The rest of the original content is removed for clarity.
+
+// Original content starts here
+// (This is where the original content would continue if needed)
+'use client';
+
+import { useState, useEffect } from 'react';
                 ))}
               </div>
             </div>
