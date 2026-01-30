@@ -1,22 +1,10 @@
-  const connectWallet = async () => {
-    try {
-      if (!window.ethereum) {
-        alert("MetaMask not detected. Please install MetaMask.");
-        return;
-      }
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-      setAddress(accounts?.[0] || null);
-    } catch (err) {
-      console.error("Wallet connect error:", err);
-    }
-  };
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Wallet, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { isContractConfigured } from '@/lib/web3/nft';
 
 import { useState, useEffect } from 'react';
 import { isContractConfigured } from "@/lib/web3/nft";
@@ -117,20 +105,21 @@ export default function Navbar() {
             </button>
           </div>
         </div>
-
-        {/* Mobile Nav */}
-        <div className="md:hidden flex items-center gap-2 pb-3 overflow-x-auto">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                pathname === link.href
-                  ? 'bg-white/10 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              {link.label}
+  
+          const connectWallet = async () => {
+            try {
+              if (!window.ethereum) {
+                alert("MetaMask not detected. Please install MetaMask.");
+                return;
+              }
+              const accounts = await window.ethereum.request({
+                method: "eth_requestAccounts",
+              });
+              setAddress(accounts?.[0] || null);
+            } catch (err) {
+              console.error("Wallet connect error:", err);
+            }
+          };
             </Link>
           ))}
         </div>
