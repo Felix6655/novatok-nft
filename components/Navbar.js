@@ -1,12 +1,10 @@
+
 "use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Wallet, AlertCircle } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { isContractConfigured } from '@/lib/web3/nft';
-
-import { useState, useEffect } from 'react';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Wallet, AlertCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { isContractConfigured } from "@/lib/web3/nft";
 
 const navLinks = [
