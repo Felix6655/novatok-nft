@@ -73,7 +73,6 @@ export default function MarketplacePage() {
             <NFTCard
               key={nft.id}
               nft={nft}
-              onBuy={() => alert(`Buying ${nft.name} - Coming Soon!`)}
             />
           ))}
         </div>

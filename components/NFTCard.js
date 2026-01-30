@@ -30,14 +30,17 @@ export default function NFTCard({ nft, onBuy, onMint, compact = false }) {
             </span>
           </div>
           
-          {onBuy && (
+          <div className="flex flex-col items-end">
             <button
-              onClick={() => onBuy(nft)}
-              className={`px-3 py-1 rounded-lg bg-white/10 hover:bg-purple-500/50 text-white font-medium transition-all border border-white/20 hover:border-purple-500 ${compact ? 'text-xs' : 'text-sm'}`}
+              disabled
+              className={`px-3 py-1 rounded-lg bg-white/10 text-white font-medium transition-all border border-white/20 opacity-50 cursor-not-allowed ${compact ? 'text-xs' : 'text-sm'}`}
             >
               Buy Now
             </button>
-          )}
+            <p className="text-xs text-gray-400 mt-1">
+              Listings coming soon
+            </p>
+          </div>
           
           {onMint && (
             <button
