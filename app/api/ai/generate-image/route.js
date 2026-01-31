@@ -1,3 +1,4 @@
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import { REPLICATE_MODEL, ASPECT_RATIOS, DEMO_IMAGES } from '@/lib/constants';
