@@ -116,7 +116,8 @@ export default function CreateClient() {
 
   const handleMint = (imageUrl) => {
     const encodedUrl = encodeURIComponent(imageUrl);
-    router.push(`/mint?image=${encodedUrl}`);
+    const encodedPrompt = encodeURIComponent(prompt);
+    router.push(`/mint?image=${encodedUrl}&prompt=${encodedPrompt}`);
   };
 
   const handleRemoveImage = (imageId) => {

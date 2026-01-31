@@ -10,32 +10,78 @@ import { useToast } from '@/components/Toast';
 import { buildTokenUri } from '@/lib/metadata';
 import { isContractConfigured } from "@/lib/web3/nft";
 
+
 function MintContent() {
   const searchParams = useSearchParams();
   const imageFromQuery = searchParams.get('image');
+  const promptFromQuery = searchParams.get('prompt');
   const { toast } = useToast();
-  
+
   const [imageUrl, setImageUrl] = useState(imageFromQuery ? decodeURIComponent(imageFromQuery) : '');
+  const [prompt, setPrompt] = useState(promptFromQuery ? decodeURIComponent(promptFromQuery) : '');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isMinting, setIsMinting] = useState(false);
   const [mintSuccess, setMintSuccess] = useState(false);
   const [mintTxHash, setMintTxHash] = useState(null);
   const [mintedTokenId, setMintedTokenId] = useState(null);
-  
-  // Use isContractConfigured from lib/web3/nft.js
+  const [progress, setProgress] = useState('');
+  const [imageValid, setImageValid] = useState(true);
+  const [imageValidationError, setImageValidationError] = useState('');
+
+  // Validate image on load or when imageUrl changes
+  useEffect(() => {
+    if (!imageUrl) return;
+    setProgress('Validating');
+    setImageValidationError('');
+    setImageValid(true);
+    validateImage(imageUrl).then(valid => {
+      if (!valid) {
+        setImageValid(false);
+        setImageValidationError('Image could not be loaded. Please check the URL or try again.');
+        setProgress('');
+      } else {
+        setImageValid(true);
+        setImageValidationError('');
+        setProgress('');
+      }
+    });
+  }, [imageUrl]);
+
+  async function validateImage(url) {
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = url;
+    });
+  }
 
   const handleMint = async () => {
     if (!imageUrl) {
       toast.warning('Please provide an image URL');
       return;
     }
-    
+    setProgress('Validating');
     setIsMinting(true);
-    
+    setImageValidationError('');
+    // Validate image before minting
+    const valid = await validateImage(imageUrl);
+    if (!valid) {
+      setImageValid(false);
+      setImageValidationError('Image could not be loaded. Please check the URL or try again.');
+      setIsMinting(false);
+      setProgress('');
+      toast.error('Image validation failed.');
+      return;
+    }
+    setImageValid(true);
+    setProgress('Preparing');
+    await new Promise(r => setTimeout(r, 600));
+    setProgress('Minting');
     if (!isContractConfigured) {
       // Demo mode - simulate minting
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 600));
       // Generate fake tx hash and token ID
       const fakeTxHash = '0x' + Array(64).fill(0).map(() => Math.floor(Math.random() * 16).toString(16)).join('');
       const fakeTokenId = Math.floor(Math.random() * 10000);
@@ -43,17 +89,24 @@ function MintContent() {
       setMintedTokenId(fakeTokenId);
       setMintSuccess(true);
       setIsMinting(false);
+      setProgress('');
       // Build tokenURI for reference
       const tokenURI = buildTokenUri({
         name: name || 'NovaTok NFT',
         description: description || 'Created with NovaTok Explorer',
         image: imageUrl,
+        prompt: prompt || '',
       });
-      console.log('Demo mint tokenURI:', tokenURI);
+      // No console.log in production, but keep for demo
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Demo mint tokenURI:', tokenURI);
+      }
       toast.success('NFT minted successfully! (Demo)');
       return;
     }
     // TODO: Add real mint logic here
+    setIsMinting(false);
+    setProgress('');
   };
 
   const resetForm = () => {
@@ -63,6 +116,10 @@ function MintContent() {
     setImageUrl('');
     setName('');
     setDescription('');
+    setPrompt('');
+    setProgress('');
+    setImageValidationError('');
+    setImageValid(true);
   };
 
   return (
@@ -150,8 +207,10 @@ function MintContent() {
                   placeholder="https://... or paste from Create page"
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
                 />
-                
-                {imageUrl && (
+                {imageValidationError && (
+                  <p className="text-red-500 text-sm mt-2">{imageValidationError}</p>
+                )}
+                {imageUrl && imageValid && (
                   <div className="mt-4 relative aspect-square w-full max-w-sm mx-auto rounded-xl overflow-hidden border border-white/10">
                     <Image
                       src={imageUrl}
@@ -162,7 +221,6 @@ function MintContent() {
                     />
                   </div>
                 )}
-                
                 {!imageUrl && (
                   <div className="mt-4 aspect-square w-full max-w-sm mx-auto rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-gray-400">
                     <Upload className="w-12 h-12 mb-2" />
@@ -173,6 +231,23 @@ function MintContent() {
                   </div>
                 )}
               </div>
+
+
+              {/* Prompt (from Create) */}
+              {prompt && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Prompt
+                  </label>
+                  <input
+                    type="text"
+                    value={prompt}
+                    onChange={e => setPrompt(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 transition-colors"
+                    readOnly
+                  />
+                </div>
+              )}
 
               {/* Name */}
               <div>
@@ -205,13 +280,13 @@ function MintContent() {
               {/* Mint Button */}
               <button
                 onClick={handleMint}
-                disabled={isMinting || !imageUrl}
+                disabled={isMinting || !imageUrl || !imageValid}
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-lg transition-all"
               >
                 {isMinting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Minting...
+                    {progress ? progress + '...' : 'Minting...'}
                   </>
                 ) : (
                   <>
@@ -220,7 +295,6 @@ function MintContent() {
                   </>
                 )}
               </button>
-              
               <p className="text-xs text-gray-500 text-center">
                 Demo mode simulates the minting process. Add NEXT_PUBLIC_NFT_CONTRACT_ADDRESS for real minting.
               </p>
