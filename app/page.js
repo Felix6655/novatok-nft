@@ -68,7 +68,8 @@ export default function HomePage() {
                       key={nft.id}
                       nft={nft}
                       compact
-                      onBuy={() => alert(`Buying ${nft.name} - Coming Soon!`)}
+                      // onBuy removed for production
+
                     />
                   ))}
                 </div>
@@ -93,7 +94,6 @@ export default function HomePage() {
                       key={`market-${nft.id}-${index}`}
                       nft={nft}
                       compact
-                      onBuy={() => alert(`Buying ${nft.name} - Coming Soon!`)}
                     />
                   ))}
                 </div>
