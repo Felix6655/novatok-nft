@@ -1,7 +1,12 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.replicate.delivery' },
+      { protocol: 'https', hostname: 'replicate.delivery' },
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: '**.cloudfront.net' },
+    ],
   },
   serverExternalPackages: ['mongodb'],
   webpack(config, { dev }) {
