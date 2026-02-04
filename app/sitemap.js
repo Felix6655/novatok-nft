@@ -1,6 +1,5 @@
 export default async function sitemap() {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "https://novatok-nft.vercel.app";
+  const baseUrl = "https://novatok-98knleyf-novatok-free.vercel.app";
 
   const routes = ["", "/marketplace", "/mint", "/my-nfts", "/create"].map(
     (path) => ({
@@ -11,4 +10,5 @@ export default async function sitemap() {
 
   return routes;
 }
+
 

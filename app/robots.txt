@@ -1,6 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://novatok-nft.vercel.app/sitemap.xml
+Sitemap: https://novatok-98knleyf-novatok-free.vercel.app/sitemap.xml
+
 
 
