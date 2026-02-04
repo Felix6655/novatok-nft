@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://novatokmarketplace.com/sitemap.xml
+Sitemap: https://novatok-nft.vercel.app/sitemap.xml
+
 
